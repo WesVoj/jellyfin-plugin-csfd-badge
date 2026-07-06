@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.0] - 2026-07-06
+
+- Add optional cached ČSFD badges to visible library cards.
+- Add bounded, deduplicated lazy lookup queue for uncached visible cards.
+- Keep card fetching disabled by default and reuse the global request throttle.
+
 ## [0.2.0] - 2026-07-06
 
 - Add installable Jellyfin repository manifest generation.

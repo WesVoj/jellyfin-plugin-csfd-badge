@@ -15,21 +15,32 @@ const rating = {
     isStale: false
 };
 
-async function createPage() {
+async function createPage(options = {}) {
     const dom = new JSDOM(
-        '<!doctype html><html><head></head><body>'
+        options.html || ('<!doctype html><html><head></head><body>'
         + '<div class="itemDetailPage"><div class="itemMiscInfo-primary"></div></div>'
-        + '</body></html>',
+        + '</body></html>'),
         {
             runScripts: 'outside-only',
             url: 'http://localhost/web/index.html#!/details?id=0123456789abcdef0123456789abcdef'
         });
 
     const { window } = dom;
+    window.IntersectionObserver = class {
+        constructor(callback) {
+            this.callback = callback;
+        }
+
+        observe(element) {
+            this.callback([{ target: element, isIntersecting: true }]);
+        }
+
+        unobserve() {}
+    };
     window.ApiClient = {
         accessToken: () => 'test-token',
         getUrl: value => `http://localhost/${value}`,
-        ajax: () => Promise.resolve(rating)
+        ajax: options.ajax || (() => Promise.resolve(rating))
     };
     window.eval(script);
     await new Promise(resolve => window.setTimeout(resolve, 250));
@@ -62,5 +73,55 @@ test('hands badge links to the native mobile shell', async () => {
 
     assert.equal(openedUrl, rating.url);
     assert.equal(click.defaultPrevented, true);
+    dom.window.close();
+});
+
+test('renders cached ratings on visible library cards in one batch', async () => {
+    const itemId = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    let batchCalls = 0;
+    const dom = await createPage({
+        html: '<!doctype html><html><head></head><body>'
+            + `<div class="card" data-id="${itemId}" data-type="Movie"><div class="cardScalable"></div></div>`
+            + '</body></html>',
+        ajax: request => {
+            if (request.url.endsWith('ClientConfiguration')) {
+                return Promise.resolve({ enableLibraryCardBadges: true, fetchCardRatingsWhileBrowsing: false });
+            }
+            if (request.url.endsWith('Items/Batch')) {
+                batchCalls += 1;
+                return Promise.resolve({ items: { [itemId]: rating }, pendingItemIds: [] });
+            }
+            return Promise.resolve(rating);
+        }
+    });
+
+    await new Promise(resolve => dom.window.setTimeout(resolve, 250));
+
+    assert.equal(batchCalls, 1);
+    assert.equal(dom.window.document.querySelectorAll('.csfd-card-rating-badge').length, 1);
+    assert.equal(dom.window.document.querySelector('.csfd-card-rating-badge').textContent, 'ČSFD 84 %');
+    dom.window.close();
+});
+
+test('does not scan library cards when card badges are disabled', async () => {
+    const itemId = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    let batchCalls = 0;
+    const dom = await createPage({
+        html: '<!doctype html><html><head></head><body>'
+            + `<div class="card" data-id="${itemId}" data-type="Movie"><div class="cardScalable"></div></div>`
+            + '</body></html>',
+        ajax: request => {
+            if (request.url.endsWith('ClientConfiguration')) {
+                return Promise.resolve({ enableLibraryCardBadges: false, fetchCardRatingsWhileBrowsing: false });
+            }
+            if (request.url.endsWith('Items/Batch')) batchCalls += 1;
+            return Promise.resolve({});
+        }
+    });
+
+    await new Promise(resolve => dom.window.setTimeout(resolve, 250));
+
+    assert.equal(batchCalls, 0);
+    assert.equal(dom.window.document.querySelectorAll('.csfd-card-rating-badge').length, 0);
     dom.window.close();
 });
