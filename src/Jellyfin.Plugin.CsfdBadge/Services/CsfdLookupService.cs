@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using System.Globalization;
-using System.Text;
 using Jellyfin.Plugin.CsfdBadge.Models;
 using MediaBrowser.Controller.Entities;
 using Microsoft.Extensions.Logging;
@@ -54,11 +52,13 @@ public sealed class CsfdLookupService
 
             try
             {
-                var refreshed = await MatchAsync(item, cancellationToken).ConfigureAwait(false);
+                var refreshed = cached is { IsManualMatch: true, CsfdId: not null }
+                    ? await LoadManualMatchAsync(item, cached.CsfdId.Value, cancellationToken).ConfigureAwait(false)
+                    : await MatchAsync(item, cancellationToken).ConfigureAwait(false);
                 await _cacheStore.SetAsync(refreshed, cancellationToken).ConfigureAwait(false);
                 return ToResponse(refreshed, false);
             }
-            catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+            catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or InvalidOperationException)
             {
                 if (cached is { NoMatch: false, Rating: not null, CsfdId: not null, Url: not null })
                 {
@@ -70,6 +70,54 @@ public sealed class CsfdLookupService
                 }
 
                 throw;
+            }
+        }
+        finally
+        {
+            itemLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Stores an administrator-selected ČSFD match.
+    /// </summary>
+    public async Task<CsfdBadgeResponse> SetManualMatchAsync(
+        BaseItem item,
+        int csfdId,
+        CancellationToken cancellationToken)
+    {
+        if (csfdId <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(csfdId), "ČSFD ID must be positive.");
+        }
+
+        var itemLock = _itemLocks.GetOrAdd(item.Id, static _ => new SemaphoreSlim(1, 1));
+        await itemLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var entry = await LoadManualMatchAsync(item, csfdId, cancellationToken).ConfigureAwait(false);
+            await _cacheStore.SetAsync(entry, cancellationToken).ConfigureAwait(false);
+            return ToResponse(entry, false)
+                ?? throw new InvalidOperationException("The selected ČSFD title has no published rating.");
+        }
+        finally
+        {
+            itemLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Removes an administrator-selected match so automatic matching can run again.
+    /// </summary>
+    public async Task ClearManualMatchAsync(BaseItem item, CancellationToken cancellationToken)
+    {
+        var itemLock = _itemLocks.GetOrAdd(item.Id, static _ => new SemaphoreSlim(1, 1));
+        await itemLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_cacheStore.Get(item.Id)?.IsManualMatch == true)
+            {
+                await _cacheStore.DeleteAsync(item.Id, cancellationToken).ConfigureAwait(false);
             }
         }
         finally
@@ -96,7 +144,8 @@ public sealed class CsfdLookupService
             Url = entry.Url,
             Title = entry.CsfdTitle ?? entry.ItemTitle,
             MatchScore = entry.MatchScore,
-            IsStale = isStale
+            IsStale = isStale,
+            IsManualMatch = entry.IsManualMatch
         };
     }
 
@@ -137,7 +186,13 @@ public sealed class CsfdLookupService
             for (var index = 0; index < results.Count; index++)
             {
                 var result = results[index];
-                var score = Score(result, item, query, index);
+                var score = CsfdMatcher.ScoreSearchResult(
+                    result,
+                    item.Name,
+                    item.OriginalTitle,
+                    item.ProductionYear,
+                    query,
+                    index);
                 if (!candidates.TryGetValue(result.Id, out var existing) || score > existing.Score)
                 {
                     candidates[result.Id] = new ScoredCandidate(result, score);
@@ -150,8 +205,9 @@ public sealed class CsfdLookupService
         var winner = ordered.FirstOrDefault();
 
         if (winner is null
-            || winner.Score < minimumScore
-            || (ordered.Length > 1 && winner.Score - ordered[1].Score < 5 && winner.Score < 100))
+            || !CsfdMatcher.IsSafeWinner(
+                ordered.Select(static candidate => candidate.Score).ToArray(),
+                minimumScore))
         {
             _logger.LogInformation(
                 "No safe ČSFD match for {ItemName} ({Year}); best score was {Score}",
@@ -167,7 +223,9 @@ public sealed class CsfdLookupService
             return CreateNoMatch(item, itemType);
         }
 
-        var verifiedScore = Math.Max(winner.Score, ScoreDetail(detail, item));
+        var verifiedScore = Math.Max(
+            winner.Score,
+            CsfdMatcher.ScoreDetail(detail, item.Name, item.OriginalTitle, item.ProductionYear));
         if (verifiedScore < minimumScore)
         {
             return CreateNoMatch(item, itemType);
@@ -199,119 +257,42 @@ public sealed class CsfdLookupService
         };
     }
 
-    private static int Score(CsfdSearchItem candidate, BaseItem item, string query, int resultIndex)
+    private async Task<CsfdCacheEntry> LoadManualMatchAsync(
+        BaseItem item,
+        int csfdId,
+        CancellationToken cancellationToken)
     {
-        var score = 20;
-        var itemYear = item.ProductionYear;
-        if (itemYear.HasValue && candidate.Year == itemYear.Value)
+        var detail = await _apiClient.GetMovieAsync(csfdId, cancellationToken).ConfigureAwait(false);
+        if (detail is null || detail.Id != csfdId || detail.Rating is null || !IsCsfdUrl(detail.Url))
         {
-            score += 30;
-        }
-        else if (itemYear.HasValue && Math.Abs(candidate.Year - itemYear.Value) == 1)
-        {
-            score += 12;
-        }
-        else if (itemYear.HasValue && candidate.Year > 0)
-        {
-            // Remakes and unrelated films often share an exact title. A clearly
-            // different year must outweigh search-result order and title score.
-            score -= 50;
+            throw new InvalidOperationException(
+                "The selected ČSFD ID is invalid, unavailable, or does not have a published rating.");
         }
 
-        score += TitleScore(candidate.Title, item.Name, item.OriginalTitle);
-        if (resultIndex == 0)
+        _logger.LogInformation(
+            "Manually matched {ItemName} ({Year}) to ČSFD {CsfdId} {CsfdTitle}",
+            item.Name,
+            item.ProductionYear,
+            detail.Id,
+            detail.Title);
+
+        return new CsfdCacheEntry
         {
-            score += 20;
-        }
-        else if (resultIndex < 3)
-        {
-            score += 10;
-        }
-
-        if (Normalize(candidate.Title) == Normalize(query))
-        {
-            score += 10;
-        }
-
-        return score;
-    }
-
-    private static int ScoreDetail(CsfdMovieDetail detail, BaseItem item)
-    {
-        var score = 20;
-        if (item.ProductionYear.HasValue && detail.Year == item.ProductionYear.Value)
-        {
-            score += 30;
-        }
-        else if (item.ProductionYear.HasValue && detail.Year > 0
-                 && Math.Abs(detail.Year - item.ProductionYear.Value) > 1)
-        {
-            score -= 50;
-        }
-
-        var titles = detail.TitlesOther.Select(static title => title.Title).Append(detail.Title);
-        var bestTitleScore = titles.Max(title => TitleScore(title, item.Name, item.OriginalTitle));
-        return score + bestTitleScore;
-    }
-
-    private static int TitleScore(string candidate, string name, string? originalTitle)
-    {
-        var normalizedCandidate = Normalize(candidate);
-        var itemTitles = new[] { name, originalTitle }
-            .Where(static title => !string.IsNullOrWhiteSpace(title))
-            .Select(static title => Normalize(title!));
-
-        var best = 0;
-        foreach (var title in itemTitles)
-        {
-            if (normalizedCandidate == title)
-            {
-                best = Math.Max(best, 50);
-            }
-            else if (normalizedCandidate.Contains(title, StringComparison.Ordinal)
-                     || title.Contains(normalizedCandidate, StringComparison.Ordinal))
-            {
-                best = Math.Max(best, 30);
-            }
-            else
-            {
-                best = Math.Max(best, (int)Math.Round(TokenSimilarity(normalizedCandidate, title) * 25));
-            }
-        }
-
-        return best;
-    }
-
-    private static double TokenSimilarity(string left, string right)
-    {
-        var leftTokens = left.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.Ordinal);
-        var rightTokens = right.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.Ordinal);
-        if (leftTokens.Count == 0 || rightTokens.Count == 0)
-        {
-            return 0;
-        }
-
-        var intersection = leftTokens.Intersect(rightTokens, StringComparer.Ordinal).Count();
-        var union = leftTokens.Union(rightTokens, StringComparer.Ordinal).Count();
-        return (double)intersection / union;
-    }
-
-    private static string Normalize(string value)
-    {
-        var decomposed = value.Normalize(NormalizationForm.FormD);
-        var builder = new StringBuilder(decomposed.Length);
-        foreach (var character in decomposed)
-        {
-            var category = CharUnicodeInfo.GetUnicodeCategory(character);
-            if (category == UnicodeCategory.NonSpacingMark)
-            {
-                continue;
-            }
-
-            builder.Append(char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : ' ');
-        }
-
-        return string.Join(' ', builder.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+            JellyfinItemId = item.Id.ToString("N"),
+            ItemTitle = item.Name,
+            ItemOriginalTitle = item.OriginalTitle,
+            ItemYear = item.ProductionYear,
+            ItemType = item.GetType().Name,
+            CsfdId = detail.Id,
+            CsfdTitle = detail.Title,
+            Rating = detail.Rating,
+            RatingCount = detail.RatingCount,
+            Url = detail.Url,
+            MatchScore = 120,
+            FetchedAtUtc = DateTimeOffset.UtcNow,
+            NoMatch = false,
+            IsManualMatch = true
+        };
     }
 
     private static bool IsCsfdUrl(string? url)

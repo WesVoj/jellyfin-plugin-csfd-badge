@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.2.0] - 2026-07-06
+
+- Add installable Jellyfin repository manifest generation.
+- Add CI coverage for matching, duplicate badge prevention, and mobile links.
+- Add administrator-controlled manual ČSFD matching without replacing native ratings.
+
 ## [0.1.2] - 2026-07-06
 
 - Hand external ČSFD URLs to the mobile operating system.

@@ -51,6 +51,29 @@
                     <span>Uložit</span>
                 </button>
             </form>
+
+            <div class="verticalSection">
+                <h3 class="sectionTitle">Ruční přiřazení ČSFD</h3>
+                <p class="fieldDescription">
+                    Použije se pouze pro chybně nebo nenalezené tituly. Lze vložit samotné ID nebo celou URL.
+                </p>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="ManualJellyfinItem">Jellyfin Item ID nebo URL detailu</label>
+                    <input is="emby-input" id="ManualJellyfinItem" type="text" />
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="ManualCsfdId">ČSFD ID nebo URL filmu/seriálu</label>
+                    <input is="emby-input" id="ManualCsfdId" type="text" />
+                </div>
+                <div style="display:flex;gap:.75em;flex-wrap:wrap">
+                    <button is="emby-button" id="SaveManualMatch" type="button" class="raised emby-button">
+                        <span>Uložit ruční přiřazení</span>
+                    </button>
+                    <button is="emby-button" id="ClearManualMatch" type="button" class="raised emby-button">
+                        <span>Zrušit ruční přiřazení</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -85,6 +108,62 @@
                     return ApiClient.updatePluginConfiguration(pluginId, config);
                 }).then(Dashboard.processPluginConfigurationUpdateResult);
                 return false;
+            });
+
+            const getItemId = () => {
+                const value = page.querySelector('#ManualJellyfinItem').value.trim();
+                const match = value.match(/[?&]id=([a-f\d-]{32,36})/i);
+                return match ? match[1] : value;
+            };
+
+            const getCsfdId = () => {
+                const value = page.querySelector('#ManualCsfdId').value.trim();
+                const match = value.match(/\/film\/(\d+)/i);
+                return Number(match ? match[1] : value);
+            };
+
+            page.querySelector('#SaveManualMatch').addEventListener('click', () => {
+                const itemId = getItemId();
+                const csfdId = getCsfdId();
+                if (!itemId || !Number.isInteger(csfdId) || csfdId <= 0) {
+                    Dashboard.alert('Zadej platné Jellyfin ID a ČSFD ID.');
+                    return;
+                }
+
+                Dashboard.showLoadingMsg();
+                ApiClient.ajax({
+                    type: 'POST',
+                    url: ApiClient.getUrl(`CsfdBadge/Items/${encodeURIComponent(itemId)}/ManualMatch`),
+                    data: JSON.stringify({ CsfdId: csfdId }),
+                    contentType: 'application/json',
+                    dataType: 'json'
+                }).then(result => {
+                    Dashboard.hideLoadingMsg();
+                    Dashboard.alert(`Přiřazeno: ${result.Title ?? result.title} – ČSFD ${result.Rating ?? result.rating} %`);
+                }, error => {
+                    Dashboard.hideLoadingMsg();
+                    Dashboard.alert(`Přiřazení se nezdařilo: ${error.statusText ?? error}`);
+                });
+            });
+
+            page.querySelector('#ClearManualMatch').addEventListener('click', () => {
+                const itemId = getItemId();
+                if (!itemId) {
+                    Dashboard.alert('Zadej Jellyfin ID nebo URL detailu.');
+                    return;
+                }
+
+                Dashboard.showLoadingMsg();
+                ApiClient.ajax({
+                    type: 'DELETE',
+                    url: ApiClient.getUrl(`CsfdBadge/Items/${encodeURIComponent(itemId)}/ManualMatch`)
+                }).then(() => {
+                    Dashboard.hideLoadingMsg();
+                    Dashboard.alert('Ruční přiřazení bylo zrušeno. Při příštím otevření proběhne automatické párování.');
+                }, error => {
+                    Dashboard.hideLoadingMsg();
+                    Dashboard.alert(`Zrušení se nezdařilo: ${error.statusText ?? error}`);
+                });
             });
         })();
     </script>

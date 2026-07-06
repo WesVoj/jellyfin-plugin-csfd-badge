@@ -117,6 +117,9 @@ public sealed class CsfdCacheEntry
 
     /// <summary>Gets or sets a value indicating whether no safe match was found.</summary>
     public bool NoMatch { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether an administrator selected the match.</summary>
+    public bool IsManualMatch { get; set; }
 }
 
 /// <summary>
@@ -144,4 +147,16 @@ public sealed class CsfdBadgeResponse
 
     /// <summary>Gets or sets a value indicating whether stale cache was returned.</summary>
     public bool IsStale { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether an administrator selected the match.</summary>
+    public bool IsManualMatch { get; set; }
+}
+
+/// <summary>
+/// Administrator request for explicitly pairing a Jellyfin item with ČSFD.
+/// </summary>
+public sealed class CsfdManualMatchRequest
+{
+    /// <summary>Gets or sets the ČSFD identifier.</summary>
+    public int CsfdId { get; set; }
 }
