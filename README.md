@@ -12,6 +12,18 @@ installed, with the default browser as fallback.
 > This is an independent, unofficial project. It is not affiliated with,
 > endorsed by, or supported by ČSFD, POMO Media Group, or the Jellyfin project.
 
+## Screenshots
+
+### Series details
+
+![ČSFD rating on the Mr. Robot series detail page](docs/images/mr-robot-series.png)
+
+![ČSFD rating on the Cyberpunk: Edgerunners series detail page](docs/images/cyberpunk-edgerunners-series.png)
+
+### Rating badge
+
+![Close-up of the ČSFD rating badge](docs/images/csfd-badge-closeup.png)
+
 ## Features
 
 - Automatic movie and series matching by title, original title, type, and year
