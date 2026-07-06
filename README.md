@@ -28,6 +28,8 @@ installed, with the default browser as fallback.
 
 - Automatic movie and series matching by title, original title, type, and year
 - Clickable `ČSFD 89 %` badge in Jellyfin Web and official mobile clients
+- Optional cached rating badges on visible library cards
+- Bounded, deduplicated lazy lookup queue for visible uncached cards
 - Local positive and negative result cache
 - Global request throttling and stale-cache fallback
 - Conservative matching threshold to avoid incorrect links
@@ -129,9 +131,18 @@ TrueNAS SCALE-specific instructions are in
 | Negative cache | 24 hours | Retry unmatched titles daily |
 | Match threshold | 70 | Reject low-confidence matches |
 | Request delay | 1200 ms | Limit load on ČSFD |
+| Library card badges | Disabled | Show cached ratings on visible cards |
+| Fetch while browsing | Disabled | Queue missing visible cards for lookup |
+| Card queue limit | 50 titles | Bound background work and memory use |
 
 The first opening of a title normally performs one search and one detail
 request. Later openings use the local cache.
+
+When library card badges are enabled, the web component requests only cards
+close to the visible viewport. Cached ratings appear immediately. If
+**Fetch while browsing** is also enabled, missing movies and series enter a
+single-worker queue with deduplication and the configured capacity. The queue
+uses the same global request delay as detail-page lookups.
 
 ### Manual matching
 

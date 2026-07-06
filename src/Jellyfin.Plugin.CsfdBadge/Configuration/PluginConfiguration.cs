@@ -36,4 +36,19 @@ public sealed class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets a value indicating whether the web badge is enabled.
     /// </summary>
     public bool EnableWebBadge { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether cached ratings are shown on library cards.
+    /// </summary>
+    public bool EnableLibraryCardBadges { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether visible uncached cards are queued for lookup.
+    /// </summary>
+    public bool FetchCardRatingsWhileBrowsing { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of pending card lookups.
+    /// </summary>
+    public int CardFetchQueueLimit { get; set; } = 50;
 }

@@ -17,6 +17,8 @@ public sealed class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<CsfdApiClient>();
         serviceCollection.AddSingleton<CsfdCacheStore>();
         serviceCollection.AddSingleton<CsfdLookupService>();
+        serviceCollection.AddSingleton<CsfdCardFetchQueue>();
+        serviceCollection.AddHostedService(static services => services.GetRequiredService<CsfdCardFetchQueue>());
         serviceCollection.AddSingleton<RegisterWebScriptTask>();
     }
 }

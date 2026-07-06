@@ -47,6 +47,28 @@
                     </label>
                 </div>
 
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="EnableLibraryCardBadges" />
+                        <span>Zobrazovat ČSFD odznaky na kartách knihovny</span>
+                    </label>
+                    <div class="fieldDescription">Zobrazí pouze hodnocení dostupná v cache.</div>
+                </div>
+
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="FetchCardRatingsWhileBrowsing" />
+                        <span>Načítat chybějící hodnocení při procházení</span>
+                    </label>
+                    <div class="fieldDescription">Do omezené fronty se zařadí pouze viditelné karty. Po změně restartuj Jellyfin.</div>
+                </div>
+
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="CardFetchQueueLimit">Maximální počet titulů ve frontě</label>
+                    <input is="emby-input" id="CardFetchQueueLimit" type="number" min="1" max="500" required />
+                    <div class="fieldDescription">Doporučeno 50. Změna se projeví po restartu Jellyfinu.</div>
+                </div>
+
                 <button is="emby-button" type="submit" class="raised button-submit block emby-button">
                     <span>Uložit</span>
                 </button>
@@ -91,6 +113,9 @@
                     page.querySelector('#MinimumMatchScore').value = config.MinimumMatchScore;
                     page.querySelector('#RequestDelayMilliseconds').value = config.RequestDelayMilliseconds;
                     page.querySelector('#EnableWebBadge').checked = config.EnableWebBadge;
+                    page.querySelector('#EnableLibraryCardBadges').checked = config.EnableLibraryCardBadges ?? false;
+                    page.querySelector('#FetchCardRatingsWhileBrowsing').checked = config.FetchCardRatingsWhileBrowsing ?? false;
+                    page.querySelector('#CardFetchQueueLimit').value = config.CardFetchQueueLimit ?? 50;
                     Dashboard.hideLoadingMsg();
                 });
             });
@@ -105,6 +130,9 @@
                     config.MinimumMatchScore = Number(page.querySelector('#MinimumMatchScore').value);
                     config.RequestDelayMilliseconds = Number(page.querySelector('#RequestDelayMilliseconds').value);
                     config.EnableWebBadge = page.querySelector('#EnableWebBadge').checked;
+                    config.EnableLibraryCardBadges = page.querySelector('#EnableLibraryCardBadges').checked;
+                    config.FetchCardRatingsWhileBrowsing = page.querySelector('#FetchCardRatingsWhileBrowsing').checked;
+                    config.CardFetchQueueLimit = Number(page.querySelector('#CardFetchQueueLimit').value);
                     return ApiClient.updatePluginConfiguration(pluginId, config);
                 }).then(Dashboard.processPluginConfigurationUpdateResult);
                 return false;

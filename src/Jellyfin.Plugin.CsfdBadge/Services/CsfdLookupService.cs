@@ -79,6 +79,16 @@ public sealed class CsfdLookupService
     }
 
     /// <summary>
+    /// Gets a cached badge without performing network activity.
+    /// </summary>
+    public CsfdBadgeResponse? GetCachedBadge(BaseItem item, out bool needsRefresh)
+    {
+        var cached = _cacheStore.Get(item.Id);
+        needsRefresh = !IsFresh(cached);
+        return cached is null ? null : ToResponse(cached, needsRefresh);
+    }
+
+    /// <summary>
     /// Stores an administrator-selected ČSFD match.
     /// </summary>
     public async Task<CsfdBadgeResponse> SetManualMatchAsync(

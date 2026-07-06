@@ -17,14 +17,83 @@ public sealed class CsfdBadgeController : ControllerBase
 {
     private readonly ILibraryManager _libraryManager;
     private readonly CsfdLookupService _lookupService;
+    private readonly CsfdCardFetchQueue _cardFetchQueue;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CsfdBadgeController"/> class.
     /// </summary>
-    public CsfdBadgeController(ILibraryManager libraryManager, CsfdLookupService lookupService)
+    public CsfdBadgeController(
+        ILibraryManager libraryManager,
+        CsfdLookupService lookupService,
+        CsfdCardFetchQueue cardFetchQueue)
     {
         _libraryManager = libraryManager;
         _lookupService = lookupService;
+        _cardFetchQueue = cardFetchQueue;
+    }
+
+    /// <summary>
+    /// Gets settings used by the injected web component.
+    /// </summary>
+    [HttpGet("ClientConfiguration")]
+    [ProducesResponseType(typeof(CsfdBadgeClientConfiguration), StatusCodes.Status200OK)]
+    public ActionResult<CsfdBadgeClientConfiguration> GetClientConfiguration()
+    {
+        var configuration = Plugin.Instance?.Configuration ?? new Configuration.PluginConfiguration();
+        return Ok(new CsfdBadgeClientConfiguration
+        {
+            EnableLibraryCardBadges = configuration.EnableLibraryCardBadges,
+            FetchCardRatingsWhileBrowsing = configuration.FetchCardRatingsWhileBrowsing
+        });
+    }
+
+    /// <summary>
+    /// Gets cached badges for visible library cards and optionally queues missing ratings.
+    /// </summary>
+    [HttpPost("Items/Batch")]
+    [ProducesResponseType(typeof(CsfdBadgeBatchResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public ActionResult<CsfdBadgeBatchResponse> GetBatch([FromBody] CsfdBadgeBatchRequest request)
+    {
+        if (request.ItemIds is null)
+        {
+            return BadRequest("ItemIds is required.");
+        }
+
+        if (request.ItemIds.Count > 100)
+        {
+            return BadRequest("A batch may contain at most 100 item IDs.");
+        }
+
+        var configuration = Plugin.Instance?.Configuration ?? new Configuration.PluginConfiguration();
+        var response = new CsfdBadgeBatchResponse();
+        foreach (var requestedId in request.ItemIds
+                     .Where(static id => !string.IsNullOrWhiteSpace(id))
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var item = GetSupportedItem(requestedId);
+            if (item is null)
+            {
+                continue;
+            }
+
+            var badge = _lookupService.GetCachedBadge(item, out var needsRefresh);
+            if (badge is not null)
+            {
+                response.Items[requestedId] = badge;
+            }
+
+            if (needsRefresh
+                && configuration.EnableLibraryCardBadges
+                && configuration.FetchCardRatingsWhileBrowsing)
+            {
+                _cardFetchQueue.TryEnqueue(item.Id);
+                response.PendingItemIds.Add(requestedId);
+            }
+        }
+
+        response.QueueSize = _cardFetchQueue.Count;
+        return Ok(response);
     }
 
     /// <summary>

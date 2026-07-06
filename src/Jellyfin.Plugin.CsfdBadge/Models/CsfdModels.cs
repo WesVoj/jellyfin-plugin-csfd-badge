@@ -160,3 +160,39 @@ public sealed class CsfdManualMatchRequest
     /// <summary>Gets or sets the ČSFD identifier.</summary>
     public int CsfdId { get; set; }
 }
+
+/// <summary>
+/// Batch request made by the library card component.
+/// </summary>
+public sealed class CsfdBadgeBatchRequest
+{
+    /// <summary>Gets or sets Jellyfin item identifiers.</summary>
+    public IReadOnlyList<string> ItemIds { get; set; } = [];
+}
+
+/// <summary>
+/// Cached ratings returned for a batch of library cards.
+/// </summary>
+public sealed class CsfdBadgeBatchResponse
+{
+    /// <summary>Gets or sets cached ratings keyed by the requested Jellyfin item ID.</summary>
+    public Dictionary<string, CsfdBadgeResponse> Items { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Gets or sets the current number of queued lookups.</summary>
+    public int QueueSize { get; set; }
+
+    /// <summary>Gets or sets requested item IDs whose ratings are still pending.</summary>
+    public List<string> PendingItemIds { get; set; } = [];
+}
+
+/// <summary>
+/// Public web-component settings.
+/// </summary>
+public sealed class CsfdBadgeClientConfiguration
+{
+    /// <summary>Gets or sets a value indicating whether card badges are enabled.</summary>
+    public bool EnableLibraryCardBadges { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether uncached visible cards may be queued.</summary>
+    public bool FetchCardRatingsWhileBrowsing { get; set; }
+}
