@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <title>ČSFD Badge</title>
+</head>
+<body>
+<div id="CsfdBadgeConfigPage" data-role="page" class="page type-interior pluginConfigurationPage"
+     data-require="emby-input,emby-checkbox,emby-button">
+    <div data-role="content">
+        <div class="content-primary">
+            <form id="CsfdBadgeConfigForm">
+                <div class="sectionTitleContainer flex align-items-center">
+                    <h2 class="sectionTitle">ČSFD Badge</h2>
+                </div>
+
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="ApiBaseUrl">node-csfd-api URL</label>
+                    <input is="emby-input" id="ApiBaseUrl" type="url" required />
+                    <div class="fieldDescription">Interní URL dostupná z Jellyfin kontejneru, např. http://192.168.1.10:3030.</div>
+                </div>
+
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="CacheHours">Platnost hodnocení (hodiny)</label>
+                    <input is="emby-input" id="CacheHours" type="number" min="1" max="8760" required />
+                </div>
+
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="NegativeCacheHours">Opakování nenalezených titulů (hodiny)</label>
+                    <input is="emby-input" id="NegativeCacheHours" type="number" min="1" max="720" required />
+                </div>
+
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="MinimumMatchScore">Minimální jistota párování</label>
+                    <input is="emby-input" id="MinimumMatchScore" type="number" min="40" max="120" required />
+                    <div class="fieldDescription">Doporučeno 70. Vyšší hodnota snižuje riziko chybného přiřazení.</div>
+                </div>
+
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="RequestDelayMilliseconds">Prodleva mezi ČSFD požadavky (ms)</label>
+                    <input is="emby-input" id="RequestDelayMilliseconds" type="number" min="500" max="30000" required />
+                </div>
+
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="EnableWebBadge" />
+                        <span>Zobrazovat odznak ve webu a mobilní aplikaci</span>
+                    </label>
+                </div>
+
+                <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                    <span>Uložit</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        (() => {
+            const pluginId = '93e08fe1-3db0-43bc-99fb-6fdbe8fe51e4';
+            const page = document.querySelector('#CsfdBadgeConfigPage');
+
+            page.addEventListener('pageshow', () => {
+                Dashboard.showLoadingMsg();
+                ApiClient.getPluginConfiguration(pluginId).then(config => {
+                    page.querySelector('#ApiBaseUrl').value = config.ApiBaseUrl;
+                    page.querySelector('#CacheHours').value = config.CacheHours;
+                    page.querySelector('#NegativeCacheHours').value = config.NegativeCacheHours;
+                    page.querySelector('#MinimumMatchScore').value = config.MinimumMatchScore;
+                    page.querySelector('#RequestDelayMilliseconds').value = config.RequestDelayMilliseconds;
+                    page.querySelector('#EnableWebBadge').checked = config.EnableWebBadge;
+                    Dashboard.hideLoadingMsg();
+                });
+            });
+
+            page.querySelector('#CsfdBadgeConfigForm').addEventListener('submit', event => {
+                event.preventDefault();
+                Dashboard.showLoadingMsg();
+                ApiClient.getPluginConfiguration(pluginId).then(config => {
+                    config.ApiBaseUrl = page.querySelector('#ApiBaseUrl').value.trim();
+                    config.CacheHours = Number(page.querySelector('#CacheHours').value);
+                    config.NegativeCacheHours = Number(page.querySelector('#NegativeCacheHours').value);
+                    config.MinimumMatchScore = Number(page.querySelector('#MinimumMatchScore').value);
+                    config.RequestDelayMilliseconds = Number(page.querySelector('#RequestDelayMilliseconds').value);
+                    config.EnableWebBadge = page.querySelector('#EnableWebBadge').checked;
+                    return ApiClient.updatePluginConfiguration(pluginId, config);
+                }).then(Dashboard.processPluginConfigurationUpdateResult);
+                return false;
+            });
+        })();
+    </script>
+</div>
+</body>
+</html>

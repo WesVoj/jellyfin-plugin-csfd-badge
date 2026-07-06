@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Restore
+        run: dotnet restore src/Jellyfin.Plugin.CsfdBadge/Jellyfin.Plugin.CsfdBadge.csproj
+
+      - name: Verify formatting
+        run: dotnet format src/Jellyfin.Plugin.CsfdBadge/Jellyfin.Plugin.CsfdBadge.csproj --verify-no-changes --no-restore
+
+      - name: Check injected JavaScript
+        run: node --check src/Jellyfin.Plugin.CsfdBadge/Web/csfd-badge.js
+
+      - name: Build
+        run: dotnet build src/Jellyfin.Plugin.CsfdBadge/Jellyfin.Plugin.CsfdBadge.csproj --configuration Release --no-restore

@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <Version>0.1.2</Version>
+    <Authors>WesVoj and contributors</Authors>
+    <RepositoryUrl>https://github.com/WesVoj/jellyfin-plugin-csfd-badge</RepositoryUrl>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <Description>Unofficial Jellyfin plugin adding cached, clickable ČSFD ratings.</Description>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+</Project>
