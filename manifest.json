@@ -1,0 +1,23 @@
+[
+{
+  "name": "ČSFD Badge",
+  "guid": "93e08fe1-3db0-43bc-99fb-6fdbe8fe51e4",
+  "overview": "Cached, clickable ČSFD ratings for Jellyfin.",
+  "description": "Adds a cached, clickable ČSFD percentage to movie and series detail pages.",
+  "owner": "WesVoj",
+  "category": "Metadata",
+  "manifestVersion": 1,
+  "readmeUrl": "https://raw.githubusercontent.com/WesVoj/jellyfin-plugin-csfd-badge/main/README.md",
+  "status": "Stable",
+  "versions": [
+    {
+      "version": "0.2.0",
+      "changelog": "See https://github.com/WesVoj/jellyfin-plugin-csfd-badge/releases/tag/v0.2.0",
+      "targetAbi": "10.11.0.0",
+      "sourceUrl": "https://github.com/WesVoj/jellyfin-plugin-csfd-badge/releases/download/v0.2.0/Jellyfin.Plugin.CsfdBadge_0.2.0.zip",
+      "checksum": "d210f23f7cfa6303b416a52f095b7d84",
+      "timestamp": "2026-07-06T20:18:39Z"
+    }
+  ]
+}
+]
