@@ -50,3 +50,7 @@ jobs:
       - name: Build release artifacts
         shell: pwsh
         run: ./scripts/build.ps1
+
+      - name: Validate plugin manifest
+        shell: pwsh
+        run: ./scripts/test-manifest.ps1

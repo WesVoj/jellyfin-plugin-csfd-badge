@@ -43,8 +43,34 @@ jobs:
         shell: pwsh
         run: ./scripts/build.ps1 -ReleaseTag $env:GITHUB_REF_NAME
 
+      - name: Validate plugin manifest
+        shell: pwsh
+        run: ./scripts/test-manifest.ps1
+
       - name: Create GitHub release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create $env:GITHUB_REF_NAME artifacts/*.zip artifacts/manifest.json --generate-notes --title $env:GITHUB_REF_NAME
+
+      - name: Publish stable repository manifest
+        shell: pwsh
+        run: |
+          $publishedManifest = Join-Path $env:RUNNER_TEMP "manifest.json"
+          Copy-Item -LiteralPath artifacts/manifest.json -Destination $publishedManifest
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin manifest:refs/remotes/origin/manifest
+          if ($LASTEXITCODE -eq 0) {
+            git switch -C manifest origin/manifest
+          } else {
+            git switch --orphan manifest
+            git rm -rf .
+          }
+          Copy-Item -LiteralPath $publishedManifest -Destination manifest.json
+          git add manifest.json
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "Update plugin manifest for $env:GITHUB_REF_NAME"
+            git push origin manifest
+          }

@@ -99,7 +99,7 @@ Install **JavaScript Injector** and restart Jellyfin.
 Add this repository in **Dashboard → Plugins → Repositories**:
 
 ```text
-https://github.com/WesVoj/jellyfin-plugin-csfd-badge/releases/latest/download/manifest.json
+https://raw.githubusercontent.com/WesVoj/jellyfin-plugin-csfd-badge/manifest/manifest.json
 ```
 
 Install **ČSFD Badge** from the catalog and restart Jellyfin.
