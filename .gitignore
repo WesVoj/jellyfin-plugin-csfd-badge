@@ -8,3 +8,4 @@ artifacts/
 *.user
 *.suo
 *.zip
+node_modules/

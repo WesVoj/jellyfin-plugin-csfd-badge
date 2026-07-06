@@ -31,6 +31,7 @@ installed, with the default browser as fallback.
 - Local positive and negative result cache
 - Global request throttling and stale-cache fallback
 - Conservative matching threshold to avoid incorrect links
+- Administrator-controlled manual matching for exceptional titles
 - Authenticated Jellyfin API endpoint
 - Configurable scraper URL, cache duration, delay, and match threshold
 
@@ -95,8 +96,16 @@ Install **JavaScript Injector** and restart Jellyfin.
 
 ### 3. Install ČSFD Badge
 
-Download the latest release ZIP, extract it to a dedicated directory under the
-Jellyfin plugins directory, and restart Jellyfin. For example:
+Add this repository in **Dashboard → Plugins → Repositories**:
+
+```text
+https://github.com/WesVoj/jellyfin-plugin-csfd-badge/releases/latest/download/manifest.json
+```
+
+Install **ČSFD Badge** from the catalog and restart Jellyfin.
+
+For a manual installation, download the latest release ZIP and extract it to a
+dedicated directory under the Jellyfin plugins directory. For example:
 
 ```text
 plugins/Csfd Badge/
@@ -124,6 +133,13 @@ TrueNAS SCALE-specific instructions are in
 The first opening of a title normally performs one search and one detail
 request. Later openings use the local cache.
 
+### Manual matching
+
+If automatic matching cannot safely identify a title, open
+**Dashboard → Plugins → ČSFD Badge**. Paste the Jellyfin item detail URL and the
+matching ČSFD URL into **Manual matching**. An administrator can also clear the
+manual match there to restore automatic matching.
+
 ## Build
 
 Requires the .NET 9 SDK and PowerShell:
@@ -132,7 +148,7 @@ Requires the .NET 9 SDK and PowerShell:
 ./scripts/build.ps1
 ```
 
-The plugin ZIP is written to `artifacts/`.
+The plugin ZIP and Jellyfin repository manifest are written to `artifacts/`.
 
 ## Responsible use
 

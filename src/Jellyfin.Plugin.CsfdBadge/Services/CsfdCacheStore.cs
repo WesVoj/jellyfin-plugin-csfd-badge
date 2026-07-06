@@ -55,6 +55,28 @@ public sealed class CsfdCacheStore
             snapshot = new Dictionary<string, CsfdCacheEntry>(_entries, StringComparer.OrdinalIgnoreCase);
         }
 
+        await PersistAsync(snapshot, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Removes one cached match.
+    /// </summary>
+    public async Task DeleteAsync(Guid itemId, CancellationToken cancellationToken)
+    {
+        Dictionary<string, CsfdCacheEntry> snapshot;
+        lock (_entries)
+        {
+            _entries.Remove(itemId.ToString("N"));
+            snapshot = new Dictionary<string, CsfdCacheEntry>(_entries, StringComparer.OrdinalIgnoreCase);
+        }
+
+        await PersistAsync(snapshot, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task PersistAsync(
+        Dictionary<string, CsfdCacheEntry> snapshot,
+        CancellationToken cancellationToken)
+    {
         await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
