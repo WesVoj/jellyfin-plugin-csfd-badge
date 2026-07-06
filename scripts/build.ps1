@@ -65,7 +65,8 @@ $manifest = @(
         )
     }
 )
-$manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $manifestPath -Encoding utf8
+$manifestJson = ConvertTo-Json -InputObject $manifest -Depth 8
+[IO.File]::WriteAllText($manifestPath, $manifestJson, [Text.UTF8Encoding]::new($false))
 Write-Host "Package: $packagePath"
 Write-Host "MD5: $($hash.Hash.ToLowerInvariant())"
 Write-Host "Manifest: $manifestPath"
