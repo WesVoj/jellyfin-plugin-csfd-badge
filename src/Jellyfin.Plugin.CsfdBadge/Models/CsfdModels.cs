@@ -196,3 +196,57 @@ public sealed class CsfdBadgeClientConfiguration
     /// <summary>Gets or sets a value indicating whether uncached visible cards may be queued.</summary>
     public bool FetchCardRatingsWhileBrowsing { get; set; }
 }
+
+/// <summary>
+/// Administrative queue and backfill status.
+/// </summary>
+public sealed class CsfdAdminStatusResponse
+{
+    /// <summary>Gets or sets the current backfill state.</summary>
+    public string State { get; set; } = "Idle";
+
+    /// <summary>Gets or sets the total number of movies and series in the library.</summary>
+    public int LibraryItems { get; set; }
+
+    /// <summary>Gets or sets the number of items selected for the current backfill.</summary>
+    public int Total { get; set; }
+
+    /// <summary>Gets or sets the number of items completed in the current backfill.</summary>
+    public int Processed { get; set; }
+
+    /// <summary>Gets or sets the number of items remaining in the current backfill.</summary>
+    public int Remaining { get; set; }
+
+    /// <summary>Gets or sets the number of successful rating matches.</summary>
+    public int Succeeded { get; set; }
+
+    /// <summary>Gets or sets the number of completed items without a safe rating match.</summary>
+    public int NotFound { get; set; }
+
+    /// <summary>Gets or sets the number of failed lookups.</summary>
+    public int Failed { get; set; }
+
+    /// <summary>Gets or sets the number of fresh cache entries skipped at startup.</summary>
+    public int Skipped { get; set; }
+
+    /// <summary>Gets or sets the completion percentage from zero to one hundred.</summary>
+    public int ProgressPercent { get; set; }
+
+    /// <summary>Gets or sets the title currently being processed.</summary>
+    public string? CurrentTitle { get; set; }
+
+    /// <summary>Gets or sets the latest backfill error.</summary>
+    public string? LastError { get; set; }
+
+    /// <summary>Gets or sets the time at which the current run started.</summary>
+    public DateTimeOffset? StartedAtUtc { get; set; }
+
+    /// <summary>Gets or sets the time at which the current run ended.</summary>
+    public DateTimeOffset? FinishedAtUtc { get; set; }
+
+    /// <summary>Gets or sets the current lazy card queue size.</summary>
+    public int LazyQueueSize { get; set; }
+
+    /// <summary>Gets or sets the configured lazy card queue capacity.</summary>
+    public int LazyQueueLimit { get; set; }
+}

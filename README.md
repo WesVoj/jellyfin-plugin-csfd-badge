@@ -30,6 +30,8 @@ installed, with the default browser as fallback.
 - Clickable `ČSFD 89 %` badge in Jellyfin Web and official mobile clients
 - Optional cached rating badges on visible library cards
 - Bounded, deduplicated lazy lookup queue for visible uncached cards
+- Live administration dashboard with queue and backfill progress
+- Manual, pausable and stoppable sequential library backfill
 - Local positive and negative result cache
 - Global request throttling and stale-cache fallback
 - Conservative matching threshold to avoid incorrect links
@@ -143,6 +145,16 @@ close to the visible viewport. Cached ratings appear immediately. If
 **Fetch while browsing** is also enabled, missing movies and series enter a
 single-worker queue with deduplication and the configured capacity. The queue
 uses the same global request delay as detail-page lookups.
+
+### Manual library backfill
+
+Open **Dashboard → Plugins → ČSFD Badge** to start a sequential backfill of all
+movies and series without a fresh cache entry. The live panel reports the
+current title, completed and remaining work, safe matches, unmatched items,
+errors, skipped cache entries, and lazy card queue usage. A run can be paused,
+resumed, or stopped; already cached results are preserved. Restarting Jellyfin
+stops the active run, which can then be started again and will skip fresh cache
+entries.
 
 ### Manual matching
 

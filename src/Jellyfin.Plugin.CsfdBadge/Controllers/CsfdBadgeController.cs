@@ -18,6 +18,7 @@ public sealed class CsfdBadgeController : ControllerBase
     private readonly ILibraryManager _libraryManager;
     private readonly CsfdLookupService _lookupService;
     private readonly CsfdCardFetchQueue _cardFetchQueue;
+    private readonly CsfdBackfillService _backfillService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CsfdBadgeController"/> class.
@@ -25,12 +26,44 @@ public sealed class CsfdBadgeController : ControllerBase
     public CsfdBadgeController(
         ILibraryManager libraryManager,
         CsfdLookupService lookupService,
-        CsfdCardFetchQueue cardFetchQueue)
+        CsfdCardFetchQueue cardFetchQueue,
+        CsfdBackfillService backfillService)
     {
         _libraryManager = libraryManager;
         _lookupService = lookupService;
         _cardFetchQueue = cardFetchQueue;
+        _backfillService = backfillService;
     }
+
+    /// <summary>Gets lazy queue and manual backfill progress.</summary>
+    [HttpGet("Admin/Status")]
+    [Authorize(Roles = "Administrator")]
+    [ProducesResponseType(typeof(CsfdAdminStatusResponse), StatusCodes.Status200OK)]
+    public ActionResult<CsfdAdminStatusResponse> GetAdminStatus() => Ok(_backfillService.GetStatus());
+
+    /// <summary>Starts a manual backfill of missing and stale ratings.</summary>
+    [HttpPost("Admin/Backfill/Start")]
+    [Authorize(Roles = "Administrator")]
+    [ProducesResponseType(typeof(CsfdAdminStatusResponse), StatusCodes.Status200OK)]
+    public ActionResult<CsfdAdminStatusResponse> StartBackfill() => Ok(_backfillService.StartBackfill());
+
+    /// <summary>Pauses the active manual backfill.</summary>
+    [HttpPost("Admin/Backfill/Pause")]
+    [Authorize(Roles = "Administrator")]
+    [ProducesResponseType(typeof(CsfdAdminStatusResponse), StatusCodes.Status200OK)]
+    public ActionResult<CsfdAdminStatusResponse> PauseBackfill() => Ok(_backfillService.Pause());
+
+    /// <summary>Resumes a paused manual backfill.</summary>
+    [HttpPost("Admin/Backfill/Resume")]
+    [Authorize(Roles = "Administrator")]
+    [ProducesResponseType(typeof(CsfdAdminStatusResponse), StatusCodes.Status200OK)]
+    public ActionResult<CsfdAdminStatusResponse> ResumeBackfill() => Ok(_backfillService.Resume());
+
+    /// <summary>Stops the active manual backfill.</summary>
+    [HttpPost("Admin/Backfill/Stop")]
+    [Authorize(Roles = "Administrator")]
+    [ProducesResponseType(typeof(CsfdAdminStatusResponse), StatusCodes.Status200OK)]
+    public ActionResult<CsfdAdminStatusResponse> StopBackfill() => Ok(_backfillService.Stop());
 
     /// <summary>
     /// Gets settings used by the injected web component.
