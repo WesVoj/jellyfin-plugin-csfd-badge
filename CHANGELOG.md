@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.4.0] - 2026-07-08
+
+- Add a live administration dashboard for lazy queue and backfill progress.
+- Add manual Start, Pause, Resume, and Stop controls for a sequential library backfill.
+- Report processed, remaining, matched, unmatched, failed, and skipped item counts.
+
 ## [0.3.0] - 2026-07-06
 
 - Add optional cached ČSFD badges to visible library cards.

@@ -13,6 +13,7 @@ public sealed class CsfdCardFetchQueue : BackgroundService
     private readonly ILibraryManager _libraryManager;
     private readonly CsfdLookupService _lookupService;
     private readonly ILogger<CsfdCardFetchQueue> _logger;
+    private readonly int _capacity;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CsfdCardFetchQueue"/> class.
@@ -25,12 +26,15 @@ public sealed class CsfdCardFetchQueue : BackgroundService
         _libraryManager = libraryManager;
         _lookupService = lookupService;
         _logger = logger;
-        var capacity = Math.Clamp(Plugin.Instance?.Configuration.CardFetchQueueLimit ?? 50, 1, 500);
-        _queue = new BoundedDeduplicatingQueue<Guid>(capacity);
+        _capacity = Math.Clamp(Plugin.Instance?.Configuration.CardFetchQueueLimit ?? 50, 1, 500);
+        _queue = new BoundedDeduplicatingQueue<Guid>(_capacity);
     }
 
     /// <summary>Gets the number of unique pending items.</summary>
     public int Count => _queue.Count;
+
+    /// <summary>Gets the configured queue capacity.</summary>
+    public int Capacity => _capacity;
 
     /// <summary>
     /// Tries to enqueue an item without waiting or creating duplicates.
