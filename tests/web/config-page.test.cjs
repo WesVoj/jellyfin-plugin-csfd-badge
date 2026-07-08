@@ -11,6 +11,10 @@ const html = fs.readFileSync(
 test('administration page renders live backfill progress', async () => {
     const dom = new JSDOM(html, { runScripts: 'outside-only', url: 'http://localhost/web/' });
     const { window } = dom;
+    const currentPage = window.document.querySelector('#CsfdBadgeConfigPage');
+    const stalePage = currentPage.cloneNode(true);
+    stalePage.querySelector('#BackfillLibraryItems').remove();
+    currentPage.parentNode.insertBefore(stalePage, currentPage);
     const status = {
         state: 'Running',
         libraryItems: 100,
@@ -51,7 +55,8 @@ test('administration page renders live backfill progress', async () => {
     };
 
     window.eval(window.document.querySelector('script').textContent);
-    const page = window.document.querySelector('#CsfdBadgeConfigPage');
+    const pages = window.document.querySelectorAll('#CsfdBadgeConfigPage');
+    const page = pages[pages.length - 1];
     page.dispatchEvent(new window.Event('pageshow'));
     await new Promise(resolve => window.setTimeout(resolve, 25));
 

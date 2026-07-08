@@ -155,7 +155,9 @@
     <script type="text/javascript">
         (() => {
             const pluginId = '93e08fe1-3db0-43bc-99fb-6fdbe8fe51e4';
-            const page = document.querySelector('#CsfdBadgeConfigPage');
+            const configPages = document.querySelectorAll('#CsfdBadgeConfigPage');
+            const page = document.currentScript?.closest('#CsfdBadgeConfigPage')
+                || configPages[configPages.length - 1];
             let statusTimer = null;
             let statusRequestPending = false;
 
@@ -201,6 +203,20 @@
                 return status?.[camelName] ?? status?.[name];
             };
 
+            const setText = (selector, value) => {
+                const element = page.querySelector(selector);
+                if (element) {
+                    element.textContent = String(value);
+                }
+            };
+
+            const setDisabled = (selector, disabled) => {
+                const element = page.querySelector(selector);
+                if (element) {
+                    element.disabled = disabled;
+                }
+            };
+
             const renderBackfillStatus = status => {
                 const state = getStatusValue(status, 'State') || 'Idle';
                 const progress = Math.max(0, Math.min(100, Number(getStatusValue(status, 'ProgressPercent')) || 0));
@@ -237,22 +253,48 @@
                     BackfillLibraryItems: 'LibraryItems'
                 };
                 Object.entries(fields).forEach(([elementId, property]) => {
-                    page.querySelector(`#${elementId}`).textContent = String(getStatusValue(status, property) ?? 0);
+                    setText(`#${elementId}`, getStatusValue(status, property) ?? 0);
                 });
 
                 const queueSize = getStatusValue(status, 'LazyQueueSize') ?? 0;
                 const queueLimit = getStatusValue(status, 'LazyQueueLimit') ?? 0;
-                page.querySelector('#LazyQueueStatus').textContent = `${queueSize} / ${queueLimit}`;
-                page.querySelector('#BackfillCurrentTitle').textContent = getStatusValue(status, 'CurrentTitle') || '–';
+                setText('#LazyQueueStatus', `${queueSize} / ${queueLimit}`);
+                setText('#BackfillCurrentTitle', getStatusValue(status, 'CurrentTitle') || '–');
 
                 const lastError = getStatusValue(status, 'LastError');
-                page.querySelector('#BackfillLastErrorRow').style.display = lastError ? '' : 'none';
-                page.querySelector('#BackfillLastError').textContent = lastError || '';
+                const lastErrorRow = page.querySelector('#BackfillLastErrorRow');
+                if (lastErrorRow) {
+                    lastErrorRow.style.display = lastError ? '' : 'none';
+                }
+                setText('#BackfillLastError', lastError || '');
 
-                page.querySelector('#StartBackfill').disabled = ['Running', 'Paused', 'Stopping'].includes(state);
-                page.querySelector('#PauseBackfill').disabled = state !== 'Running';
-                page.querySelector('#ResumeBackfill').disabled = state !== 'Paused';
-                page.querySelector('#StopBackfill').disabled = !['Running', 'Paused'].includes(state);
+                setDisabled('#StartBackfill', ['Running', 'Paused', 'Stopping'].includes(state));
+                setDisabled('#PauseBackfill', state !== 'Running');
+                setDisabled('#ResumeBackfill', state !== 'Paused');
+                setDisabled('#StopBackfill', !['Running', 'Paused'].includes(state));
+            };
+
+            const getRequestErrorMessage = async error => {
+                let responseText = '';
+                if (typeof error?.text === 'function') {
+                    try {
+                        responseText = (await error.text()).trim();
+                    } catch (readError) {
+                        console.debug('[ČSFD Badge] Nelze přečíst chybovou odpověď', readError);
+                    }
+                }
+
+                if (responseText) {
+                    try {
+                        const problem = JSON.parse(responseText);
+                        responseText = problem.detail || problem.title || responseText;
+                    } catch {
+                        // The server returned plain text.
+                    }
+                }
+
+                const status = [error?.status, error?.statusText].filter(Boolean).join(' ');
+                return [status, responseText].filter(Boolean).join(': ') || String(error);
             };
 
             const loadBackfillStatus = () => {
@@ -291,9 +333,9 @@
                 }).then(status => {
                     Dashboard.hideLoadingMsg();
                     renderBackfillStatus(status);
-                }, error => {
+                }, async error => {
                     Dashboard.hideLoadingMsg();
-                    Dashboard.alert(`Operace backfillu selhala: ${error.statusText ?? error}`);
+                    Dashboard.alert(`Operace backfillu selhala: ${await getRequestErrorMessage(error)}`);
                 });
             };
 
