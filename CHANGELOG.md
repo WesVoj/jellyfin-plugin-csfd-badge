@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.4.1] - 2026-07-08
+
+- Fix administration rendering when Jellyfin keeps an older plugin page in the DOM.
+- Show useful HTTP response details when an administration action fails.
+
 ## [0.4.0] - 2026-07-08
 
 - Add a live administration dashboard for lazy queue and backfill progress.
